@@ -7,6 +7,7 @@
 INIT            JSR PREVENT_CASE_CHANGE ;prevent the user from using shift+CBM to change the case into lower or upper case
                 JSR CLEAR_SCREEN        ;
 
+
 MAIN_MENU       LDX #0                  ;build the screen
                 LDY #0                  ;
                 JSR SET_CURSOR          ;
@@ -23,8 +24,6 @@ NOT_MAIN_CHA    CMP #USER_INPUT_CHB     ;
                 BNE NOT_MAIN_CHB        ;
                 JMP MAKE_IMAGE          ;
 NOT_MAIN_CHB    JMP MAIN_MENU           ;if the user pressed an invalid value, do nothing, just keep waiting for the proper key to be pressed
-
-
 
 
 ;###############################################################################
@@ -166,8 +165,10 @@ CR_DISK_FRMT_OK LDX #0                  ;formatting went perfect, now
                 LDY #>SCREEN_DATA       ;
                 JSR PRINT_STRING        ;the print routine is called, so the pointed text is now printed to screen  
 
-   
-
+                LDA TABLE_PP_BLOCK_35T  ;this value is the stepsize for the progressbar, it is increased by this amount each time we call UPDATE_PROGRBAR
+               ;LDA TABLE_PP_BLOCK_40T  ;this value is the stepsize for the progressbar, it is increased by this amount each time we call UPDATE_PROGRBAR
+                JSR INIT_PROGRBAR       ;reset and initialize the progressbar
+          
 CR_DISK_TRN_01  JSR CHECK_FOR_KEY       ;allow user to abort safely
                 BNE CR_DISK_EXIT        ;key pressed? then exit
 
@@ -194,6 +195,8 @@ CR_DISK_TRN_10  LDX TRACK               ;send track
                 JSR WRITE_BLOCK         ;write data to disk
                 INC SECTOR              ;increment sector counter, so that we know what to do next
 
+                JSR UPDATE_PROGRBAR     ;increment the progressbar by the appropriate amount
+
                 LDA SECTOR              ;
                 CMP SECTOR_MAX          ;
                 BNE CR_DISK_TRN_01      ;process the next sector
@@ -207,6 +210,7 @@ CR_DISK_TRN_10  LDX TRACK               ;send track
                 STA SECTOR              ;
                 INC TRACK               ;inc. track
 
+                ;are we ready?
                 LDA TRACK_MAX           ;
                 CLC                     ;
                 ADC #1                  ;
@@ -229,7 +233,7 @@ TXT_CLEAR       TEXT '                                      ';
 TXT_CONFIRM_YN  TEXT 'are you sure? y/n                     ';
                 BYTE 0
 
-TXT_NOTSUPP     TEXT 'error:D64 file has more then 35tracks ';
+TXT_NOTSUPP     TEXT 'error:file not supported              ';
                 BYTE 0
 
 TXT_FORMATTING  TEXT 'formatting...                         ';
@@ -1029,13 +1033,125 @@ TXT_DEV_NOT_PRESENT     TEXT "drive #8 not found" ;we use " because we are print
 DRIVE_STATUS    BYTE $00        
 
 
+
+;-------------------------------------------------------------------------------
+;this routine will initialize the progressbar
+;example:
+;               LDA TABLE_PP_BLOCK_35T  ;increment bar by the appropriate amount
+;               JSR INIT_PROGRBAR       ;reset and initialize the progressbar
+;...............................................................................
+
+INIT_PROGRBAR   STA PRGBAR_STEP         ;
+                LDA #0                  ;
+                STA PRGBAR_L            ;reset progresbar to 0
+                STA PRGBAR_H            ;
+
+                RTS                     ;return to caller
+
+;-------------------------------------------------------------------------------
+;this routine will update the progressbar
+;example:
+;               JSR UPDATE_PROGRBAR     ;increment the progressbar by the appropriate amount
+;...............................................................................
+
+UPDATE_PROGRBAR STA PRGBAR_TMP          ;save requested bar value
+                JSR SET_CURSOR          ;set cursor to first position of the bar (user has specified the position using X and Y registers)
+                ;update progressbar
+                CLC                     ;clear carry, so that we can use it later for the low-byte overflow
+                LDA PRGBAR_STEP         ;increment bar by the appropriate amount
+                ADC PRGBAR_L            ;
+                STA PRGBAR_L            ;
+                LDA #0                  ;add the carry caused by the overflow of the low byte
+                ADC PRGBAR_H            ;
+                STA PRGBAR_H            ;
+                ;LDA PRGBAR_H           ;we send the value in the high byte
+                LDX #5                  ;the first position of the bar on the screen (row)
+                LDY #9                  ;the first position of the bar on the screen (column)
+                ;from here we roll straight into DRAW_PROGRBAR
+
+;-------------------------------------------------------------------------------
+;this routine will draw a progressbar made up entirely from PETSCII characters
+;example:
+;               LDA PRGBAR              ;the value of the progressbar ($00=0%, $FF=100%)
+;               LDX #5                  ;the first position of the bar on the screen (row)
+;               LDY #9                  ;the first position of the bar on the screen (column)
+;               JSR DRAW_PROGRBAR       ;
+;...............................................................................
+
+DRAW_PROGRBAR   STA PRGBAR_TMP          ;save requested bar value
+                JSR SET_CURSOR          ;set cursor to first position of the bar (user has specified the position using X and Y registers)
+
+;debug only (show the high and low byte before printing)
+;        LDX #0                  ;build the screen
+;        LDY #0                  ;
+;        JSR SET_CURSOR          ;
+;        LDA PRGBAR_H            ;
+;        JSR PRINT_HEX           ;the print routine is called
+;        LDA PRGBAR_L            ;
+;        JSR PRINT_HEX           ;the print routine is called
+
+;        LDX #6                  ;build the screen
+;        LDY #0                  ;
+;        JSR SET_CURSOR          ;
+;        LDA PRGBAR_TMP          ;
+;        JSR PRINT_HEX           ;the print routine is called
+
+
+                LDA #31                 ;the bar consists of ..+1 chars
+                STA PRGBAR_CLR          ;
+
+        ;the we fill it with full chars
+                LDA PRGBAR_TMP          ;calculate the number of chars that need to be completely filled
+                LSR                     ;
+                LSR                     ;
+                LSR                     ;
+                STA PRGBAR_FILL         ;
+                BEQ DRAW_BAR_FILLED     ;
+
+DRAW_BAR_FILL   LDY #7                  ;#7 is the "completely filled char", perfect for filling a progress bar
+                LDA PRGBAR_CHARS,Y      ;get the appropriate char from the table
+                JSR PRINT_CHAR          ;character is printed to screen, cursor is incremented by one
+                DEC PRGBAR_CLR          ;decrement the number of CLR characters we need to draw afterwards
+                DEC PRGBAR_FILL         ;
+                BNE DRAW_BAR_FILL       ;
+
+        ;then finally we fill it with the detailed char for the last 8 pixels of the bars position
+DRAW_BAR_FILLED LDA PRGBAR_TMP          ;
+                AND #$7                 ;
+                TAY                     ;
+                LDA PRGBAR_CHARS,Y      ;get the appropriate char from the table
+                JSR PRINT_CHAR          ;character is printed to screen, cursor is incremented by one
+
+
+         ;clear all the chars for the remaining part of the bar
+                LDA PRGBAR_CLR          ;
+                BEQ DRAW_BAR_CLRD       ;
+DRAW_BAR_CLR    LDY #0                  ;#0 is the "completely cleared char", perfect for clearing a progress bar
+                LDA PRGBAR_CHARS,Y      ;get the appropriate char from the table
+                JSR PRINT_CHAR          ;character is printed to screen, cursor is incremented by one
+                DEC PRGBAR_CLR          ;
+                BNE DRAW_BAR_CLR        ;
+
+DRAW_BAR_CLRD   RTS                     ;return to caller
+
+
+PRGBAR_TMP      byte 0
+PRGBAR_FILL     byte 0
+PRGBAR_CLR      byte 0
+PRGBAR_CHARS    ;text'01234567' ;useful for debug
+                BYTE    $20,$74,$65,$75,$61,$F6,$EA,$E0 ;the definiton of the individual pixels of the bar
+
+PRGBAR_STEP     byte 0  ;this value is added each time the update_progrbar is called
+PRGBAR_L        byte 0
+PRGBAR_H        byte 0
+
 ;===============================================================================
 ;Writing a sector to disk
 ;------------------------
 ;For writing a sector to disk, the Commodore DOS offers the block write command.
 ;Due to heavy bugs in the B-W command, Commodore has sacrificed one of the user
 ;commands as a bugfix replacement. So instead of B-W you simply use U2.
-;The format of this DOS command is: â€œU2 <channel> <drive> <track> <sector>â€
+;The format of this DOS command is: U2 <channel> <drive> <track> <sector>
 ;The drive parameter is only used for dual disk drives, so for all common 
 ;C64/C128/C16 drives this parameter will always be 0.
 ;Parameters track and sector explain themselves. They are sent in PETSCII
@@ -1392,6 +1508,16 @@ TABLE_MAXSEC
         BYTE           17;     717       $2CD00    = track 38  
         BYTE           17;     734       $2DE00    = track 39  
         BYTE           17;     751       $2EF00    = track 40  
+
+
+;a 35track disc, has 683 blocks, the progressbar is 255=100%.
+;To make fractional number possible, we firt multiply by 256 and then discard the least 8 bits afterwards.
+;so (256*256)/683 = 95,953 (we round that down to 95) so each block (of a 35 track disc) should increase the counter by that value
+TABLE_PP_BLOCK_35T   byte    95
+;so (256*256)/767 = 85,445 (we round that down to 85) so each block (of a 40 track disc) should increase the counter by that value
+TABLE_PP_BLOCK_40T   byte    85
+
+;Now there is one problem, due to the inaccuracy, the bar will never reach 100%, so it seems to finish early, but this will be too short to notice in most cases
 
 ;-------------------------------------------------------------------------------
 ;these tables are for the kernal routines to communicate with the drive

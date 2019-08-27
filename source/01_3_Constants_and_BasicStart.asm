@@ -8,7 +8,7 @@ ifdef COMMODORE64
 *=$0810
 PRG_IDENTIFIER
             ;'0123456789ABCDEF'
-        TEXT 'disk wizard c64' ;this message could be valuable hint in solving a problem
+        TEXT 'd64 wizard c64 ' ;this message could be valuable hint in solving a problem
         BYTE 0;end of table marker
         ;also usefull for debugging on vice, then the screen is no longer completely empty and you know that something has happened
 

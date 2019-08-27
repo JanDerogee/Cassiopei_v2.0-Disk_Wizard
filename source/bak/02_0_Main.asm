@@ -229,7 +229,7 @@ TXT_CLEAR       TEXT '                                      ';
 TXT_CONFIRM_YN  TEXT 'are you sure? y/n                     ';
                 BYTE 0
 
-TXT_NOTSUPP     TEXT 'error:D64 file has more then 35tracks ';
+TXT_NOTSUPP     TEXT 'error:file not supported              ';
                 BYTE 0
 
 TXT_FORMATTING  TEXT 'formatting...                         ';
@@ -1035,7 +1035,7 @@ DRIVE_STATUS    BYTE $00
 ;For writing a sector to disk, the Commodore DOS offers the block write command.
 ;Due to heavy bugs in the B-W command, Commodore has sacrificed one of the user
 ;commands as a bugfix replacement. So instead of B-W you simply use U2.
-;The format of this DOS command is: â€œU2 <channel> <drive> <track> <sector>â€
+;The format of this DOS command is: U2 <channel> <drive> <track> <sector>
 ;The drive parameter is only used for dual disk drives, so for all common 
 ;C64/C128/C16 drives this parameter will always be 0.
 ;Parameters track and sector explain themselves. They are sent in PETSCII

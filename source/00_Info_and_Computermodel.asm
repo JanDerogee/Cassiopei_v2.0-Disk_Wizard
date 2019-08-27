@@ -53,11 +53,11 @@ COMMODORE64 = 1
 ;COMMODORE16PLUS4 = 1
 
 VERSION_STRING_00 = 1 ;tens of year
-VERSION_STRING_01 = 7 ;ones of year
-VERSION_STRING_02 = 1 ;tens of month
-VERSION_STRING_03 = 1 ;ones of month
-VERSION_STRING_04 = 0 ;tens of day
-VERSION_STRING_05 = 8 ;ones of day
+VERSION_STRING_01 = 9 ;ones of year
+VERSION_STRING_02 = 0 ;tens of month
+VERSION_STRING_03 = 8 ;ones of month
+VERSION_STRING_04 = 2 ;tens of day
+VERSION_STRING_05 = 5 ;ones of day
 
 ;-------------------------------------------------------------------------------
 ;File name convention:
