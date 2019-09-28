@@ -8,12 +8,14 @@ ifdef COMMODORE64
 *=$0810
 PRG_IDENTIFIER
             ;'0123456789ABCDEF'
-        TEXT 'd64 wizard c64 ' ;this message could be valuable hint in solving a problem
+        TEXT 'disk wizard c64 ' ;this message could be valuable hint in solving a problem
         BYTE 0;end of table marker
         ;also usefull for debugging on vice, then the screen is no longer completely empty and you know that something has happened
 
 *=$0830
 PRG_START       JMP INIT        ;start the program
+
+;-------------------------------------------------------------------------------
 
 ;-- zeropage RAM registers--
 CPIO_DATA       = $02  ;this zeropage memory location is used to parse the CPIO data
@@ -45,15 +47,43 @@ SUPPORTED_Y_SIZE = 25           ;screen width of a C64 is 25 rows
 ;location of the status line
 X_POS_STATUS    = 1
 Y_POS_STATUS    = 23
-
-
+X_POS_PROGBAR   = 5
+Y_POS_PROGBAR   = 9
+SCR_POS_TRACK   = $0661
+SCR_POS_SECTOR  = $0689
 
 DEVICE          = 8             ;the device number of the disk drive
 DATA_AREA       = $06D0         ;store data here (when using $0400+ for a C64, it will be in the video memory and clearly visible, usefull for debugging)
-PLOT            = $FFF0
 
 SCR_POS         = $0681         ;the location on the screen where the string will be printed
 STR_POS_MAX     = 37            ;the max size of the filename (the practical limit is determined by the screen size)
+
+;kernal variables
+KVAR_CCCC       = $0286       ;Current Character Color Code
+KVAR_BCUC       = $0287       ;Background Color Under Cursor
+
+;kernal routines
+KERN_LINPRT     = $BDCD         ;print basic line number for C64
+KERN_PLOT       = $FFF0         ;cursor position
+KERN_SETNAM     = $FFBD       ;call SETNAM
+KERN_SETLFS     = $FFBA       ;call SETLFS
+KERN_OPEN       = $FFC0       ;call OPEN
+KERN_CLOSE      = $FFC3       ;call CLOSE
+KERN_CHKIN      = $FFC6       ;call CHKIN
+KERN_CHKOUT     = $FFC9       ;call CHKOUT (file 2 now used as output)
+KERN_CHROUT     = $FFD2       ;call CHROUT
+KERN_CLRCHN     = $FFCC       ;call CLRCHN
+KERN_READST     = $FFB7       ;call READST
+KERN_CHRIN      = $FFCF       ;call CHRIN
+KERN_RUNSTOP    = $FFE1       ;RUN/STOP pressed?
+KERN_LISTEN     = $FFB1       ;call LISTEN
+KERN_UNLISTEN   = $FFAE       ;call UNLSN
+KERN_TALK       = $FFB4       ;call TALK
+KERN_UNTALK     = $FFAB       ;call UNTLK
+KERN_SECLSN     = $FF93       ;call SECLSN (SECOND)
+KERN_SECTALK    = $FF96       ;call SECTLK (TKSA)
+KERN_IECIN      = $FFA5       ;call IECIN (get byte from IEC bus)
+
 ;-------------------------------------------------------------------------------
 endif   ;this endif belongs to "ifdef COMMODORE64"
 ;<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

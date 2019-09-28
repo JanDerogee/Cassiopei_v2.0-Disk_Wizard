@@ -47,17 +47,28 @@
 ;COMMODOREPET30XX = 1
 ;COMMODOREPET40XX
 ;COMMODOREPET80XX
-;COMMODOREVIC20 = 1
-COMMODORE64 = 1
+COMMODOREVIC20 = 1
+;COMMODORE64 = 1
 ;COMMODORE128 = 1
-;COMMODORE16PLUS4 = 1
+;COMMODORE16 = 1
+;COMMODOREPLUS4 = 1
+
+TYPE_D64 = 1
+;TYPE_D81 = 1
+
+;these two defines exist for the purpose of making a smaller program
+;the unexpanded VIC20 can't hold the code for both at the same time
+;so for that model, comment one of the 2 lines below:
+;MAKEDISK = 1
+MAKEIMAGE = 1
+
 
 VERSION_STRING_00 = 1 ;tens of year
 VERSION_STRING_01 = 9 ;ones of year
 VERSION_STRING_02 = 0 ;tens of month
-VERSION_STRING_03 = 8 ;ones of month
-VERSION_STRING_04 = 2 ;tens of day
-VERSION_STRING_05 = 5 ;ones of day
+VERSION_STRING_03 = 9 ;ones of month
+VERSION_STRING_04 = 0 ;tens of day
+VERSION_STRING_05 = 8 ;ones of day
 
 ;-------------------------------------------------------------------------------
 ;File name convention:

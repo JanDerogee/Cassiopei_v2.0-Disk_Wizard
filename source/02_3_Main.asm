@@ -21,9 +21,6 @@ TODCLK          = $A0           ;Time-Of-Day clock register (MSB)
 ;TODCLK+1       = $A1           ;Time-Of-Day clock register (.SB)
 ;TODCLK+2       = $A2           ;Time-Of-Day clock register (LSB)
 
-STR_MEM         TEXT "c64/d64/disk-image-01.d64"   ;filename or to be more precise, the filepath for the image file as stored on the Cassiopei SD-card
-                BYTE $0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0,$0
-
 ;###############################################################################
 
 ;-- keycodes --
@@ -46,7 +43,7 @@ KEY_Y           = $19           ;$19 = Y
 KEY_ESC         = $39           ;$39 = <-- (the key that is on the top left of the C64 keyboard (next to the '1'-key and above the 'control'-key))
 
 ;-------------------------------------------------------------------------------
-;Read the keyboard and joystick, this routine converts the keycode to a control
+;Read the keyboard, this routine converts the keycode to a control
 ;code that is easier to decode. This value is stored in A
 ;...............................................................................
 SCAN_INPUTS     LDA ALLOW_KEYREPEAT     ;some functions/keys have keyrepeat, this makes it easier to scroll
@@ -143,6 +140,7 @@ CHECK_FOR_KEY   JSR SCAN_KEYBOARD       ;scan keyboard
 ;-------------------------------------------------------------------------------
 ;This routine will wait until the user presses a key
 ;call example   JSR WAIT_FOR_KEY
+;               key value in A
 ;...............................................................................
 WAIT_FOR_KEY    LDA #0                  ;clear keyboard buffer
                 STA KEYCNT              ;
@@ -150,6 +148,7 @@ WAIT_FOR_KEY_01 JSR SCAN_KEYBOARD       ;because the interrupts are disabled dur
                 LDA $C5                 ;matrix value of last Key pressed
                 CMP #KEY_NOTHING        ;check for key
                 BEQ WAIT_FOR_KEY_01     ;continue loop when no key is detected
+                LDA KEYBUF              ;
                 RTS                     ;
 
 ;-------------------------------------------------------------------------------

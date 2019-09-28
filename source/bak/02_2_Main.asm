@@ -2,7 +2,7 @@
 ifdef COMMODOREVIC20
 ;-------------------------------------------------------------------------------
 
-SCAN_KEYBOARD   = $FF9F ;scans the keyboard and puts the matrix value in $C5
+SCNKEY          = $FF9F ;scans the keyboard and puts the matrix value in $C5
 CHROUT          = $FFD2 ;
 
 KEYCNT          = 198           ;the counter that keeps track of the number of key in the keyboard buffer       VIC-20
@@ -19,13 +19,50 @@ TODCLK          = $8D           ;Time-Of-Day clock register (MSB) BASIC>1 uses l
 
 ;-- keycodes -- (VIC20 keyboard scanning values)
 
-KEY_NOTHING     = $40           ;matrix value when no key is pressed
+KEY_NOTHING     = $40           ;$40 = matrix value when no key is pressed
+KEY_F1          = $27           ;$27 = F1
+KEY_F3          = $2F           ;$2F = F3
+KEY_F5          = $37           ;$37 = F5
+KEY_F7          = $3F           ;$3F = F7
 
-KEY_F3          = $2F
-KEY_F5          = $37
-KEY_F7          = $3F
+KEY_RETURN      = $0F           ;$0F = RETURN
+KEY_1           = $0            ;$00 = 1 
+KEY_2           = $38           ;$38 = 2
+KEY_C           = $22           ;$22 = C
+KEY_D           = $12           ;$12 = D
+KEY_E           = $31           ;$31 = E
+KEY_F           = $2A           ;$2A = F
+KEY_N           = $1C           ;$1C = N
+KEY_T           = $32           ;$32 = T
+KEY_V           = $1B           ;$1B = V
+KEY_Y           = $0B           ;$0B = Y
+KEY_ESC         = $18           ;$18 = <-- (the key that is on the top left of the C64 keyboard (next to the '1'-key and above the 'control'-key))
+
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+;the list below, showing keyboard scancodes, was taken from:
+;http://www.zimmers.net/cbmpics/cbm/vic/memorymap.txt
+;...............................................................
+;#  key          #  key          #  key          #  key
+;0  1            16 none         32 space        48 Q
+;1  3            17 A            33 Z            49 E
+;2  5            18 D            34 C            50 T
+;3  7            19 G            35 B            51 U
+;4  9            20 J            36 M            52 O
+;5  +            21 L            37 .            53 @
+;6  £ (pound)    22 ;            38 none         54 ^ (up arrow)
+;7  DEL          23 crsr lt/rt   39 f1           55 f5
+;8  <-           24 STOP         40 none         56 2
+;9  W            25 none         41 S            57 4
+;10 R            26 X            42 F            58 6
+;11 Y            27 V            43 H            59 8
+;12 I            28 N            44 K            60 0
+;13 P            29 ,            45 :            61 -
+;14 *            30 /            46 =            62 HOME
+;15 RETURN       31 crsr up/dn   47 f3           63 f7
+;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ;-------------------------------------------------------------------------------
-;Read the keyboard and joystick, this routine converts the keycode to a control
+;Read the keyboard, this routine converts the keycode to a control
 ;code that is easier to decode. This value is stored in A
 
 ;unfortunately the VIC20 keyboard does not always produce reliable results,
@@ -46,58 +83,37 @@ SCAN_KEYPRESS   LDA #8                  ;number of times the matrix value should
                 LDA $CB                 ;current matrix value
                 STA DEBOUNCE_CURRENT    ;save current value
                 CMP #KEY_NOTHING        ;check for the "no key pressed" situation
-                BEQ SCAN_JOYSTICK       ;no keyboard action, check joystick
+                BEQ SCAN_VAL_IDLE       ;no keyboard action
 
 SCAN_KEY_LP     JSR $EB1E               ;use kernal routine to scan VIC20 keyboard
                 LDA $CB                 ;current matrix value, compare this to the previous
                 CMP DEBOUNCE_CURRENT    ;value, if this value stays the same for .. time in a row
-                BNE SCAN_JOYSTICK       ;then it must be correct and we may process that value
+                BNE SCAN_VAL_IDLE       ;then it must be correct and we may process that value
                 DEC DEBOUNCE_CNT        ;
                 LDA DEBOUNCE_CNT        ;
                 BNE SCAN_KEY_LP         ;keep looping until counter reaches 0
 
-                LDA DEBOUNCE_CURRENT    ;
+                LDA DEBOUNCE_CURRENT    ;check if the current key value is one of the keys we are interested in
                 CMP #KEY_F3             ;
                 BEQ SCAN_VAL_PREV       ;
                 CMP #KEY_F5             ;
                 BEQ SCAN_VAL_SELECT     ;
                 CMP #KEY_F7             ;
                 BEQ SCAN_VAL_NEXT       ; 
+                CMP #KEY_D              ;
+                BEQ SCAN_VAL_DIR        ;
+                CMP #KEY_C              ;
+                BEQ SCAN_VAL_CREATE     ;
+                CMP #KEY_ESC            ;
+                BEQ SCAN_VAL_EXIT       ;
+                CMP #KEY_F              ;
+                BEQ SCAN_VAL_FNAME      ;
+                CMP #KEY_N              ;
+                BEQ SCAN_VAL_NO         ;
+                CMP #KEY_Y              ;
+                BEQ SCAN_VAL_YES        ;
 
-SCAN_JOYSTICK   ;LDA #$00                ;make sure that inputs are set as inputs
-                LDA #$80                ;ATN (bit-7) is output, the rest is input
-                STA $9113               ;
-
-                LDA $9111               ;joy#1
-                AND #%00101100          ;mask out joystick signals before checking
-                CMP #%00101100          ;is in a position other then the center position
-                BEQ SCAN_EXIT           ;if not then we exit immediately
-
-                LDA #160                ;
-                STA DEBOUNCE_CNT        ;
-                LDA $9111               ;joy#1
-                AND #%00101100          ;mask out joystick signals
-                STA DEBOUNCE_CURRENT    ;
-SCAN_JOY_LP     LDA $9111               ;joy#1
-                AND #%00101100          ;mask out joystick signals
-                CMP DEBOUNCE_CURRENT    ;
-                BNE SCAN_EXIT           ;
-                DEC DEBOUNCE_CNT        ;
-                BEQ SCAN_JOY_LP         ;keep looping (until we reach the thresshold) if the joystick stays the same...
-
-                LDA #%00100000          ;fire
-                BIT $9111               ;joy#1
-                BEQ SCAN_VAL_SELECT     ;
-
-                LDA #%00000100          ;up
-                BIT $9111               ;joy#1
-                BEQ SCAN_VAL_PREV       ;
-
-                LDA #%00001000          ;down
-                BIT $9111               ;joy#1
-                BEQ SCAN_VAL_NEXT       ;
-
-SCAN_EXIT       LDA #1                  ;allow keyrepeat in order to react better to keypresses (because there is no check for releasing screwing things up)
+SCAN_VAL_IDLE   LDA #1                  ;do not allow keyrepeat on this button
                 STA ALLOW_KEYREPEAT     ;
                 LDA #USER_INPUT_IDLE    ;nothing happened, send idle value
                 RTS
@@ -117,19 +133,71 @@ SCAN_VAL_NEXT   LDA #1                  ;allow keyrepeat on this button
                 LDA #USER_INPUT_NEXT    ;
                 RTS
 
+SCAN_VAL_CREATE LDA #0                  ;do not allow keyrepeat on this button
+                STA ALLOW_KEYREPEAT     ;
+                LDA #USER_INPUT_CREATE  ;
+                RTS
+
+SCAN_VAL_DIR    LDA #0                  ;do not allow keyrepeat on this button
+                STA ALLOW_KEYREPEAT     ;
+                LDA #USER_INPUT_DIR     ;
+                RTS
+
+SCAN_VAL_EXIT   LDA #0                  ;do not allow keyrepeat on this button
+                STA ALLOW_KEYREPEAT     ;
+                LDA #USER_INPUT_EXIT    ;
+                RTS
+
+SCAN_VAL_FNAME  LDA #0                  ;do not allow keyrepeat on this button
+                STA ALLOW_KEYREPEAT     ;
+                LDA #USER_INPUT_FILENAME;
+                RTS
+
+SCAN_VAL_NO     LDA #0                  ;do not allow keyrepeat on this button
+                STA ALLOW_KEYREPEAT     ;
+                LDA #USER_INPUT_NO      ;
+                RTS
+
+SCAN_VAL_YES    LDA #0                  ;do not allow keyrepeat on this button
+                STA ALLOW_KEYREPEAT     ;
+                LDA #USER_INPUT_YES     ;
+                RTS
+
+
 ALLOW_KEYREPEAT         BYTE $0 ;this is a flag that indicates if keyrepeat is allowed (0=key repeat not alowed, 1=key repeat alowed)
 DEBOUNCE_CNT            BYTE $0 ;use for debouncing
 DEBOUNCE_CURRENT        BYTE $0 ;use for debouncing
 
 
 ;-------------------------------------------------------------------------------
-;This routine will wait until the user presses a key
+;This routine will have the Z-flag set when no key is pressed
+;call example   JSR CHECK_FOR_KEY
+;               BNE <jump to wherever because a key was pressed>
+;...............................................................................
+CHECK_FOR_KEY   JSR SCNKEY              ;scan keyboard
+                LDA $C5                 ;matrix value of last Key pressed
+                CMP #KEY_NOTHING        ;check for key
+                RTS                     ;
+
+;-------------------------------------------------------------------------------
+;This routine will wait until the user presses a key (it is a blocking routine)
 ;call example   JSR WAIT_FOR_KEY
 ;...............................................................................
-WAIT_FOR_KEY    JSR $EB1E               ;use kernal routine to scan VIC20 keyboard
-                LDA $CB                 ;
-                CMP #KEY_NOTHING        ;check for the "no key pressed" situation
-                BEQ WAIT_FOR_KEY        ;continue loop when no key is detected
+WAIT_FOR_KEY    LDA #0                  ;clear keyboard buffer
+                STA $C6                 ;by clearing pointer
+WAIT_FOR_KEY_01 JSR $EB1E               ;use kernal routine to scan VIC20 keyboard
+                LDA $C6                 ;
+                BEQ WAIT_FOR_KEY_01     ;
+                LDA $0277               ;first loc of keyboard buffer
+                RTS                     ;return with ..SCII key value in A
+
+;-------------------------------------------------------------------------------
+;This routine will wait until the user releases the keyboard
+;call example   WAIT_KEY_RELEASE
+;...............................................................................
+WAIT_KEY_RELEASE
+                JSR CHECK_FOR_KEY       ;
+                BNE WAIT_KEY_RELEASE    ;
                 RTS                     ;
 
 ;-------------------------------------------------------------------------------
@@ -235,27 +303,21 @@ ALLOW_CASE_CHANGE
 ;This routine will print extra computer specific information
 ;Example:       JSR SHOW_VERSION
 ;...............................................................................
-SHOW_VERSION    LDX #1                  ;set cursor to top,left
-                LDY #1                  ;
+SHOW_VERSION    LDX #0                  ;set cursor to top,left
+                LDY #0                  ;
                 JSR SET_CURSOR          ;
                 LDA #<PRG_IDENTIFIER    ;set pointer to the text that defines the main-screen
                 LDY #>PRG_IDENTIFIER    ;        
                 JSR PRINT_STRING        ;the print routine is called, so the pointed text is now printed to screen     
                
-                LDX #1                  ;set cursor to top,left
-                LDY #2                  ;
+                LDX #0                  ;set cursor to top,left
+                LDY #1                  ;
                 JSR SET_CURSOR          ;
                 LDA #<VERSION_INFO      ;set pointer to the text that defines the main-screen
                 LDY #>VERSION_INFO      ;        
                 JSR PRINT_STRING        ;the print routine is called, so the pointed text is now printed to screen     
 
                 RTS
-
-;-------------------------------------------------------------------------------
-PRG_IDENTIFIER      ;'0123456789ABCDEF'
-                TEXT 'petscii player:vic20' ;if the wrong menu PRG is installed onto the cassiopei, this message could be valuable hint in solving the problem also usefull for debugging on vice, then the screen is no longer completely empty and you know that something has happened
-                BYTE 0;end of table marker
-
 
 ;-------------------------------------------------------------------------------
 endif   ;this endif belongs to "ifdef COMMODOREVIC20"
