@@ -13,3 +13,5 @@ Though technically this is still possible but requires lot's of research, mostly
 If you do want to process your entire collection of disks, well then there are plenty of other solutions out there that do
 focus on that and only that. For instance: http://www.6502.org/users/sjgray/software/cbmxfer/cbmxfer.html
 
+For more information regarding the Cassiopei v2.0, visit my website: https://janderogee.com/projects/Cassiopei/Cassiopei_v2.htm
+
